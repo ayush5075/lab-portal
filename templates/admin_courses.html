@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}Courses{% endblock %}
+{% block body_class %}admin-fullscreen-page{% endblock %}
+{% block content %}
+<div class="page-heading">
+  <div>
+    <h1>Courses</h1>
+    <p class="muted">Add, search, update, and manage courses.</p>
+  </div>
+</div>
+
+<div class="grid two">
+  <div class="card">
+    <h2>Add Course</h2>
+    <form method="post" action="{{ url_for('admin_courses') }}">
+      <label for="course-name">Course Name</label>
+      <input id="course-name" type="text" name="name" required>
+      <label for="course-year">Year</label>
+      <select id="course-year" name="year" required>
+        <option value="">Select year</option>
+        {% for year in ['1Year', '2Year', '3Year', '4Year'] %}
+          <option value="{{ year }}">{{ year[0] }} YEAR</option>
+        {% endfor %}
+      </select>
+      <label for="course-section">Section</label>
+      <select id="course-section" name="course_section" required>
+        {% for section in ['A', 'B', 'C', 'D', 'E', 'F', 'G'] %}
+          <option value="{{ section }}" {% if section == 'A' %}selected{% endif %}>{{ section }}</option>
+        {% endfor %}
+      </select>
+      <label for="course-status">Status</label>
+      <select id="course-status" name="status" required>
+        <option value="active" selected>Active</option>
+        <option value="inactive">Inactive</option>
+      </select>
+      <button type="submit">Add Course</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <h2>Search Courses</h2>
+    <form method="get" action="{{ url_for('admin_courses') }}">
+      <label for="course-search">Course name, year, or subject</label>
+      <input id="course-search" type="search" name="q" value="{{ search }}" placeholder="Search by course, year, or subject">
+      <label for="course-subject-search">Subject</label>
+      <input id="course-subject-search" type="text" name="subject" value="{{ subject }}" list="course-subject-search-list" placeholder="Filter by subject">
+      <datalist id="course-subject-search-list">
+        {% for subject_option in subjects %}
+          <option value="{{ subject_option.name }}"></option>
+        {% endfor %}
+      </datalist>
+      <button type="submit">Search Courses</button>
+    </form>
+  </div>
+
+</div>
+
+<div class="card courses-table-card">
+  {% if courses %}
+    <table>
+      <tr><th>ID</th><th>Course Name</th><th>Year</th><th>Section</th><th>Status</th><th>Actions</th></tr>
+      {% for course in courses %}
+        <tr>
+        <td>{{ course.id }}</td>
+        <td>{{ course.name }}</td>
+        <td>{{ course.year }}</td>
+            <td>{{ course.course_section }}</td>
+        <td>{{ course.status|title }}</td>
+          <td>
+            <div class="table-actions">
+              <a href="{{ url_for('admin_edit_course', course_id=course.id) }}" class="action-btn success-btn">Update</a>
+              <form method="post" action="{{ url_for('admin_delete_course', course_id=course.id) }}" style="display:inline">
+                <button type="submit" class="action-btn danger-btn">Delete</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+      {% endfor %}
+    </table>
+  {% else %}
+    <p class="muted">No courses found.</p>
+  {% endif %}
+</div>
+{% endblock %}

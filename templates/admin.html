@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% block title %}Admin Panel{% endblock %}
+{% block body_class %}admin-panel-page{% endblock %}
+{% block content %}
+<h1>Admin Panel</h1>
+
+{% if not courses %}
+  <p class="muted">No courses available. <a href="{{ url_for('admin_courses') }}">Add Course</a></p>
+{% endif %}
+
+<div class="grid stats">
+  <div class="stat"><span>{{ courses|length }}</span>Courses</div>
+  <div class="stat"><span>{{ students_count }}</span>Students</div>
+  <div class="stat"><span>{{ docs_count }}</span>Documents</div>
+  <div class="stat"><span>{{ active_sessions|length }}</span>Active Lab Keys</div>
+</div>
+
+<section class="subject-attendance-section">
+  <div class="page-heading">
+    <div>
+      <h2>Subject Attendance</h2>
+      <p class="muted">Open a subject to view its students' attendance register.</p>
+    </div>
+    <a class="button-link" href="{{ url_for('admin_subjects') }}">Manage Subjects</a>
+  </div>
+  {% if subjects %}
+    <div class="subject-attendance-grid">
+      {% for subject in subjects %}
+        <a class="subject-attendance-card" href="{{ url_for('admin_attendance', subject_id=subject.id) }}">
+          <strong>{{ subject.name }}</strong>
+          <span>View Attendance</span>
+        </a>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="card"><p class="muted">No subjects created yet.</p></div>
+  {% endif %}
+</section>
+
+<div class="grid two admin-lab-row">
+  <div class="card lab-key-generator">
+    <h2>Generate 6-Digit Lab Key</h2>
+    <form method="post" action="{{ url_for('admin_generate_lab_key') }}">
+      <label>Course</label>
+      {% if courses %}
+        <select id="lab-course" name="course_id" required>
+          {% for course in courses %}
+            <option value="{{ course.id }}">{{ course.name|course_label(course.year) }}</option>
+          {% endfor %}
+        </select>
+        <label for="lab-subject">Subject</label>
+        <select id="lab-subject" name="subject_id" required>
+          <option value="">Select subject</option>
+          {% for subject in subjects %}
+            <option value="{{ subject.id }}">{{ subject.name }}</option>
+          {% endfor %}
+        </select>
+      {% else %}
+        <select id="lab-course" name="course_id" required disabled>
+          <option value="">No courses available yet</option>
+        </select>
+        <p class="muted">Add a course first before generating a lab key.</p>
+      {% endif %}
+      <label>Valid For (minutes)</label>
+      <input type="number" name="minutes" value="{{ config.LAB_KEY_DEFAULT_MINUTES }}" min="1" max="240" {% if not courses %}disabled{% endif %}>
+      <button type="submit" {% if not courses %}disabled{% endif %}>Generate Key</button>
+    </form>
+  </div>
+
+  <div class="card active-lab-keys-card">
+    <h2>Active Lab Keys</h2>
+    {% if active_sessions %}
+      <table class="active-lab-keys-table">
+        <tr>
+          <th>Course</th>
+          <th>Lab Key</th>
+          <th>Validity Period</th>
+          <th>Expires In<span class="sr-only">Time Left</span></th>
+          <th>Action</th>
+        </tr>
+        {% for s in active_sessions %}
+          <tr>
+            <td>{{ s.course_name|course_label(s.course_year) }}</td>
+            <td><strong>{{ s.code }}</strong></td>
+            <td>{{ s.validity_minutes|default(0) }} Minutes</td>
+            <td class="expires-countdown countdown" data-expires="{{ s.expires_at }}">Calculating...</td>
+            <td>
+              <div class="table-actions">
+                <form method="post" action="{{ url_for('admin_deactivate_lab', session_id=s.id) }}">
+                  <button type="submit" class="action-btn" data-variant="danger-btn">Deactivate</button>
+                </form>
+              </div>
+            </td>
+          </tr>
+        {% endfor %}
+      </table>
+    {% else %}
+      <p class="muted">No active lab keys.</p>
+    {% endif %}
+  </div>
+</div>
+<script>
+  const labCourse = document.getElementById("lab-course");
+  function updateCountdowns() {
+    document.querySelectorAll(".expires-countdown").forEach((element) => {
+      const expiry = new Date(element.dataset.expires.replace(" ", "T") + "Z");
+      const remaining = Math.max(0, expiry.getTime() - Date.now());
+      const totalSeconds = Math.floor(remaining / 1000);
+      const hours = Math.floor(totalSeconds / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      const seconds = totalSeconds % 60;
+
+      if (remaining <= 0) {
+        element.textContent = "Expired";
+        element.classList.add("expired");
+        return;
+      }
+
+      element.classList.toggle("warning", totalSeconds <= 180);
+
+      element.textContent = `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+    });
+  }
+
+  updateCountdowns();
+  setInterval(updateCountdowns, 1000);
+</script>
+{% endblock %}

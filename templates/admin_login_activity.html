@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% block title %}Login Activity{% endblock %}
+{% block body_class %}management-page admin-fullscreen-page{% endblock %}
+{% block content %}
+<div class="management-shell">
+  <main class="management-main">
+    <header class="management-header">
+      <div>
+        <h1>Login Activity</h1>
+        <p>Student login and logout records with device audit history.</p>
+      </div>
+    </header>
+
+    <section class="management-stats">
+      <div>
+        <span class="management-stat-icon blue">L</span>
+        <div>
+          <small>Student Sessions</small>
+          <strong>{{ activity|length }}</strong>
+          <em>Recorded logins</em>
+        </div>
+      </div>
+      <div>
+        <span class="management-stat-icon green">D</span>
+        <div>
+          <small>Device Events</small>
+          <strong>{{ device_activity|length }}</strong>
+          <em>Lock and unlock actions</em>
+        </div>
+      </div>
+    </section>
+
+    <section class="management-panel table-panel">
+      <div class="management-table-title">
+        <div>
+          <h2>Student Login Activity</h2>
+          <p>{{ activity|length }} record(s) currently shown</p>
+        </div>
+        <span class="management-table-badge">Live Session Log</span>
+      </div>
+
+      {% if activity %}
+        <div class="management-table-wrap">
+          <table class="management-table">
+            <thead>
+              <tr><th>Student ID</th><th>User</th><th>Course</th><th>Login Time</th><th>Logout Time</th><th>Status</th></tr>
+            </thead>
+            <tbody>
+              {% for item in activity %}
+                <tr>
+                  <td>{{ item.student_id or '-' }}</td>
+                  <td>{{ item.user_name }}</td>
+                  <td>{{ item.course_name|course_label(item.course_year) if item.course_name else '-' }}</td>
+                  <td>{{ item.login_time|ist }}</td>
+                  <td>{{ item.logout_time|ist }}</td>
+                  <td>{{ item.session_status }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="management-empty">No student login activity recorded.</div>
+      {% endif %}
+    </section>
+
+    <section class="management-panel table-panel">
+      <div class="management-table-title">
+        <div>
+          <h2>Device Lock / Unlock / Delete Activity</h2>
+          <p>{{ device_activity|length }} action(s) currently shown</p>
+        </div>
+        <label class="activity-status-filter" for="device-activity-status">
+          Status
+          <select id="device-activity-status">
+            <option value="all">All statuses</option>
+            <option value="lock">Lock</option>
+            <option value="unlock">Unlock</option>
+            <option value="delete">Delete</option>
+          </select>
+        </label>
+      </div>
+
+      {% if device_activity %}
+        <div class="management-table-wrap">
+          <table class="management-table">
+            <thead>
+              <tr><th>Time</th><th>Action</th><th>Device</th><th>Asset Tag</th><th>User</th><th>Student ID</th><th>Email</th><th>Mobile</th><th>Status</th><th>Reason</th></tr>
+            </thead>
+            <tbody>
+              {% for item in device_activity %}
+                <tr data-device-action="{{ item.action|lower }}">
+                  <td>{{ item.action_time|ist }}</td>
+                  <td>{{ item.action }}</td>
+                  <td>{{ item.device_name or '-' }}</td>
+                  <td>{{ item.asset_tag or '-' }}</td>
+                  <td>{{ item.student_name or '-' }}</td>
+                  <td>{{ item.student_identifier or '-' }}</td>
+                  <td>{{ item.student_email or '-' }}</td>
+                  <td>{{ item.student_mobile or '-' }}</td>
+                  <td>{{ item.previous_status }} to {{ item.new_status }}</td>
+                  <td>{{ item.reason or '-' }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="management-empty">No device lock, unlock, or delete activity recorded.</div>
+      {% endif %}
+    </section>
+  </main>
+</div>
+<script>
+  const deviceActivityStatus = document.getElementById("device-activity-status");
+  deviceActivityStatus.addEventListener("change", () => {
+    document.querySelectorAll("[data-device-action]").forEach((row) => {
+      row.hidden = deviceActivityStatus.value !== "all" && row.dataset.deviceAction !== deviceActivityStatus.value;
+    });
+  });
+</script>
+{% endblock %}

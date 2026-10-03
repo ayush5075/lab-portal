@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Document Details{% endblock %}
+{% block content %}
+<h1>Document Details</h1>
+
+<div class="card">
+  <p><strong>Title:</strong> {{ document.title }}</p>
+  <p><strong>Course:</strong> {{ document.course_name|course_label(document.course_year) }}</p>
+  <p><strong>Uploaded:</strong> {{ document.uploaded_at|ist }}</p>
+  <div class="table-actions">
+    <a href="{{ url_for('download_document', doc_id=document.id) }}" class="action-btn">Download</a>
+    <a href="{{ url_for('admin_update_document', doc_id=document.id) }}" class="action-btn success-btn">Update</a>
+    <form method="post" action="{{ url_for('admin_delete_document', doc_id=document.id) }}" style="display:inline">
+      <button type="submit" class="action-btn danger-btn">Delete</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

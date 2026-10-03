@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Uploaded Documents{% endblock %}
+{% block body_class %}admin-fullscreen-page{% endblock %}
+{% block content %}
+<div class="page-heading">
+  <div>
+    <h1>Uploaded Documents</h1>
+    <p class="muted">Manage all course documents uploaded by the admin.</p>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Upload Document</h2>
+  <form method="post" action="{{ url_for('admin_upload_document') }}" enctype="multipart/form-data">
+    <label>Title</label>
+    <input type="text" name="title" required>
+    <label>Course</label>
+    {% if courses %}
+      <select name="course_id" required>
+        {% for course in courses %}
+          <option value="{{ course.id }}">{{ course.name|course_label(course.year) }}</option>
+        {% endfor %}
+      </select>
+    {% else %}
+      <select name="course_id" required disabled>
+        <option value="">No courses available yet</option>
+      </select>
+      <p class="muted">Add a course first to enable document uploads.</p>
+    {% endif %}
+    <label>File</label>
+    <input type="file" name="file" required {% if not courses %}disabled{% endif %}>
+    <button type="submit" {% if not courses %}disabled{% endif %}>Upload</button>
+  </form>
+</div>
+
+<div class="card">
+  {% if documents %}
+    <table>
+      <tr><th>Title</th><th>Course</th><th>Uploaded</th><th>Actions</th></tr>
+      {% for doc in documents %}
+        <tr>
+          <td>{{ doc.title }}</td>
+          <td>{{ doc.course_name|course_label(doc.course_year) }}</td>
+          <td>{{ doc.uploaded_at|ist }}</td>
+          <td>
+            <div class="table-actions">
+              <a href="{{ url_for('admin_show_document', doc_id=doc.id) }}" class="action-btn">Show</a>
+              <a href="{{ url_for('admin_update_document', doc_id=doc.id) }}" class="action-btn success-btn">Update</a>
+              <form method="post" action="{{ url_for('admin_delete_document', doc_id=doc.id) }}" style="display:inline">
+                <button type="submit" class="action-btn danger-btn">Delete</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+      {% endfor %}
+    </table>
+  {% else %}
+    <p class="muted">No documents uploaded yet.</p>
+  {% endif %}
+</div>
+{% endblock %}

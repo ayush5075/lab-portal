@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Registration{% endblock %}
+{% block body_class %}auth-page register-page{% endblock %}
+{% block content %}
+<div class="card registration-card">
+  <div class="registration-heading">
+    <p class="eyebrow">LAB PORTAL</p>
+    <h1>Registration</h1>
+    <p class="muted">Create your student account to access lab sessions and documents.</p>
+  </div>
+
+  <form method="post" class="registration-form">
+    <div class="registration-field">
+      <label for="student-id" class="required-label">Student ID <span class="required-star">*</span></label>
+      <input id="student-id" type="text" name="student_id" required autofocus>
+    </div>
+
+    <div class="registration-field">
+      <label for="full-name" class="required-label">Full Name <span class="required-star">*</span></label>
+      <input id="full-name" type="text" name="name" required>
+    </div>
+
+    <div class="registration-field">
+      <label for="email" class="required-label">Email <span class="required-star">*</span></label>
+      <input id="email" type="email" name="email" maxlength="255" autocomplete="email" required>
+    </div>
+
+    <div class="registration-field">
+      <label for="mobile-number" class="required-label">Mobile No <span class="required-star">*</span></label>
+      <input id="mobile-number" type="tel" name="mobile_no" inputmode="numeric" pattern="[0-9]{10}" minlength="10" maxlength="10" title="Enter exactly 10 digits without spaces or symbols." autocomplete="tel" required>
+    </div>
+
+    <div class="registration-field">
+      <label for="password" class="required-label">Password <span class="required-star">*</span></label>
+      <input id="password" type="password" name="password" minlength="6" required>
+    </div>
+
+    <div class="registration-field">
+      <label for="course" class="required-label">Course <span class="required-star">*</span></label>
+      <select id="course" name="course_id" required>
+        <option value="">-- Select a course --</option>
+        {% for course in courses %}
+          <option value="{{ course.id }}">{{ course.name|course_label(course.year) }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="registration-field">
+      <label for="section" class="required-label">Section <span class="required-star">*</span></label>
+      <select id="section" name="section" required>
+        <option value="">-- Select a section --</option>
+        {% for section in ['A', 'B', 'C', 'D', 'E', 'F', 'G'] %}
+          <option value="{{ section }}">{{ section }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <button type="submit" class="registration-submit">Registration</button>
+  </form>
+  <p class="registration-footer muted">Already have an account? <a href="{{ url_for('login') }}">Log in</a></p>
+</div>
+{% endblock %}

@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Update Course{% endblock %}
+{% block content %}
+<div class="page-heading">
+  <div>
+    <h1>Update Course</h1>
+    <p class="muted">Change the course name, year, section, or status.</p>
+  </div>
+</div>
+
+<div class="card narrow">
+  <form method="post">
+    <label for="course-name">Course Name</label>
+    <input id="course-name" type="text" name="name" value="{{ course.name }}" required>
+    <label for="course-year">Year</label>
+    <select id="course-year" name="year" required>
+      {% set years = ['1Year', '2Year', '3Year', '4Year'] %}
+      {% if course.year not in years %}
+        <option value="" disabled {% if not course.year %}selected{% endif %}>Select year</option>
+      {% endif %}
+      {% for year in years %}
+        <option value="{{ year }}" {% if course.year == year %}selected{% endif %}>{{ year[0] }} YEAR</option>
+      {% endfor %}
+    </select>
+    <label for="course-section">Section</label>
+    <select id="course-section" name="course_section" required>
+      {% set sections = ['A', 'B', 'C', 'D', 'E', 'F', 'G'] %}
+      {% set current_section = 'A' %}
+      {% if course.course_section is defined and course.course_section in sections %}
+        {% set current_section = course.course_section %}
+      {% endif %}
+      {% for section in sections %}
+        <option value="{{ section }}" {% if section == current_section %}selected{% endif %}>{{ section }}</option>
+      {% endfor %}
+    </select>
+    <label for="course-status">Status</label>
+    <select id="course-status" name="status" required>
+      <option value="active" {% if course.status == 'active' %}selected{% endif %}>Active</option>
+      <option value="inactive" {% if course.status == 'inactive' %}selected{% endif %}>Inactive</option>
+    </select>
+    <button type="submit">Save Changes</button>
+  </form>
+</div>
+{% endblock %}

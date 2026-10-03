@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}Attendance Reports{% endblock %}
+{% block body_class %}admin-fullscreen-page{% endblock %}
+{% block content %}
+<div class="page-heading">
+  <div>
+    <h1>Attendance Reports</h1>
+    <p class="muted">Filter attendance by date, student, or subject.</p>
+  </div>
+</div>
+
+<div class="card">
+  <form method="get" class="filter-form report-filter-form">
+    <div>
+      <label for="report-date-from">Date from</label>
+      <input id="report-date-from" type="date" name="date_from" value="{{ date_from }}">
+    </div>
+    <div>
+      <label for="report-date-to">Date to</label>
+      <input id="report-date-to" type="date" name="date_to" value="{{ date_to }}">
+    </div>
+    <div>
+      <label for="report-student">Student</label>
+      <input id="report-student" type="text" name="student_id" value="{{ selected_student_id }}" placeholder="Enter Student ID">
+    </div>
+    <div>
+      <label for="report-course">Course</label>
+      <select id="report-course" name="course_id">
+        <option value="">All courses</option>
+        {% for course in courses %}
+          <option value="{{ course.id }}" {% if selected_course_id == course.id|string %}selected{% endif %}>{{ course.name|course_label(course.year) }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label for="report-subject">Subject</label>
+      <select id="report-subject" name="subject_id">
+        <option value="">All subjects</option>
+        {% for subject in subjects %}
+          <option value="{{ subject.id }}" {% if selected_subject_id == subject.id|string %}selected{% endif %}>{{ subject.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="filter-actions">
+      <button type="submit">Generate Report</button>
+      <a href="{{ url_for('admin_reports') }}" class="button-link secondary-btn">Clear</a>
+      <a class="excel-btn export-excel-btn" href="{{ url_for('admin_export_attendance', view='report', date_from=date_from, date_to=date_to, course_id=selected_course_id, student_id=selected_student_id, subject_id=selected_subject_id, _external=True) }}">&#128228; Export Reports</a>
+    </div>
+  </form>
+</div>
+
+<div class="card">
+  <div class="page-heading report-heading">
+    <h2>Attendance Records</h2>
+    <strong>{{ records|length }} record(s)</strong>
+  </div>
+  {% if records %}
+    <table>
+      <tr><th>Date & Time</th><th>Student</th><th>Student ID</th><th>Course</th><th>Section</th><th>Subject</th><th>Lab Code</th></tr>
+      {% for record in records %}
+        <tr>
+          <td>{{ record.timestamp|ist }}</td>
+          <td>{{ record.student_name[:1]|upper }}{{ record.student_name[1:] }}<br><span class="muted">{{ record.email }}</span></td>
+          <td>{{ record.roll_no or '-' }}</td>
+          <td>{{ record.course_name|course_label(record.course_year) }}</td>
+          <td>{{ record.student_section or '-' }}</td>
+          <td>{{ record.subject_name or 'Legacy / Unassigned' }}</td>
+          <td>{{ record.code }}</td>
+        </tr>
+      {% endfor %}
+    </table>
+  {% else %}
+    <p class="muted">No attendance records match the selected filters.</p>
+  {% endif %}
+</div>
+{% endblock %}

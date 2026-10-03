@@ -1,0 +1,291 @@
+{% extends "base.html" %}
+{% block title %}Admin Permission Management{% endblock %}
+{% block body_class %}admin-panel-page admin-permissions-page{% endblock %}
+{% block content %}
+{% set admin_stats = admin_stats|default(none) %}
+{% if admin_stats is none %}
+  {% set admin_stats = namespace(total=admins|default([])|length, active=0, inactive=0, suspended=0, super_admins=0) %}
+  {% for entry in admins|default([]) %}
+    {% set status = (entry.admin.account_status or 'active')|lower %}
+    {% if entry.admin.super_admin %}{% set admin_stats.super_admins = admin_stats.super_admins + 1 %}{% endif %}
+    {% if status == 'active' %}{% set admin_stats.active = admin_stats.active + 1 %}
+    {% elif status == 'inactive' %}{% set admin_stats.inactive = admin_stats.inactive + 1 %}
+    {% elif status == 'suspended' %}{% set admin_stats.suspended = admin_stats.suspended + 1 %}{% endif %}
+  {% endfor %}
+{% endif %}
+<div class="admin-permission-shell">
+  <div class="page-heading admin-permissions-header">
+    <div>
+      <div class="permission-title-row">
+        <span class="permission-title-mark" aria-hidden="true">&#10003;</span>
+        <div>
+          <p class="eyebrow">Super Admin Control Panel</p>
+          <h1>Admin Permission Management</h1>
+          <p class="muted">Manage admin access and permissions from the Super Admin panel.</p>
+        </div>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button type="button" class="action-btn primary-btn add-admin-trigger" id="open-admin-create">＋ Add New Admin</button>
+    </div>
+  </div>
+
+  <div class="admin-permission-stats">
+    <div class="permission-stat total-stat">
+      <span class="permission-stat-icon" aria-hidden="true">&#9679;</span>
+      <div><small>Total Admins</small><strong>{{ admin_stats.total }}</strong></div>
+    </div>
+    <div class="permission-stat active-stat">
+      <span class="permission-stat-icon" aria-hidden="true">&#10003;</span>
+      <div><small>Active Admins</small><strong>{{ admin_stats.active }}</strong></div>
+    </div>
+    <div class="permission-stat inactive-stat">
+      <span class="permission-stat-icon" aria-hidden="true">&#10074;&#10074;</span>
+      <div><small>Inactive Admins</small><strong>{{ admin_stats.inactive }}</strong></div>
+    </div>
+    <div class="permission-stat suspended-stat">
+      <span class="permission-stat-icon" aria-hidden="true">&#33;</span>
+      <div><small>Suspended Admins</small><strong>{{ admin_stats.suspended }}</strong></div>
+    </div>
+  </div>
+
+  <dialog class="admin-create-dialog" id="admin-create-dialog">
+    <form method="post" action="{{ url_for('admin_permissions_page') }}" class="admin-create-form">
+      <input type="hidden" name="action" value="create_admin">
+      <div class="admin-dialog-heading"><div><p class="eyebrow">Admin Accounts</p><h2>Create Admin</h2></div><button type="button" class="dialog-close" id="close-admin-create" aria-label="Close">×</button></div>
+      <label>Name<input type="text" name="name" maxlength="255" autocomplete="name" required></label>
+      <label>Email<input type="email" name="email" maxlength="255" autocomplete="email" required></label>
+      <label>Initial Password<input type="password" name="password" minlength="6" autocomplete="new-password" required></label>
+      <div class="admin-dialog-actions"><button type="button" class="action-btn neutral-btn" id="cancel-admin-create">Cancel</button><button type="submit" class="action-btn primary-btn">Create Admin</button></div>
+    </form>
+  </dialog>
+
+  <div class="card admin-permission-toolbar">
+    <form method="get" class="admin-permission-filters" action="{{ url_for('admin_permissions_page') }}">
+      <div class="filter-field wide-search">
+        <label class="sr-only" for="admin-search">Search admins</label>
+        <span class="admin-search-icon" aria-hidden="true">⌕</span>
+        <input id="admin-search" type="search" name="search" value="{{ search_term }}" placeholder="Search admin name, email or username...">
+        <button type="submit" class="admin-search-submit" aria-label="Search admins" title="Search">⌕</button>
+      </div>
+      <div class="filter-field">
+        <label class="sr-only" for="role-filter">Role</label>
+        <select id="role-filter" name="role" aria-label="Filter by role">
+          <option value="">All Roles</option>
+          <option value="super_admin" {% if selected_role == 'super_admin' %}selected{% endif %}>Super Admin</option>
+          <option value="admin" {% if selected_role == 'admin' %}selected{% endif %}>Admin</option>
+        </select>
+      </div>
+      <div class="filter-field">
+        <label class="sr-only" for="status-filter">Status</label>
+        <select id="status-filter" name="status" aria-label="Filter by status">
+          <option value="">All Status</option>
+          <option value="active" {% if selected_status == 'active' %}selected{% endif %}>Active</option>
+          <option value="inactive" {% if selected_status == 'inactive' %}selected{% endif %}>Inactive</option>
+          <option value="suspended" {% if selected_status == 'suspended' %}selected{% endif %}>Suspended</option>
+        </select>
+      </div>
+      {% if search_term or selected_role or selected_status %}<a class="admin-filter-reset" href="{{ url_for('admin_permissions_page') }}">Reset</a>{% endif %}
+    </form>
+  </div>
+
+  <div class="admin-page-permissions-layout{% if page_permissions_admin %} has-page-permissions{% endif %}">
+  <div class="card table-card">
+    <div class="table-wrap admin-permissions-table-wrap">
+      <table class="data-table admin-permissions-table">
+        <thead>
+          <tr>
+            <th>S.No.</th>
+            <th>Admin Name</th>
+            <th>Username / Email</th>
+            <th>Role</th>
+            <th>Status</th>
+            <th>Last Login</th>
+            <th>Permissions</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if admins %}
+            {% for entry in admins %}
+              {% set admin = entry.admin %}
+              <tr>
+                <td>{{ loop.index }}</td>
+                <td>{{ admin.name }}</td>
+                <td>{{ admin.email }}</td>
+                <td>
+                  {% if admin.super_admin %}
+                    <span class="status-pill status-super">Super Admin</span>
+                  {% else %}
+                    <span class="status-pill status-admin">Admin</span>
+                  {% endif %}
+                </td>
+                <td>
+                  <span class="admin-status-badge status-{{ admin.account_status|default('active') }}">{{ (admin.account_status or 'active')|title }}</span>
+                </td>
+                <td>{{ admin.last_login or 'Never' }}</td>
+                <td>
+                  <div class="permissions-summary">
+                    <span>{{ entry.active_permission_count }} rights</span>
+                  </div>
+                </td>
+                <td>
+                  <div class="table-actions compact-actions">
+                    <a class="action-btn small-btn view-permissions-btn" href="{{ url_for('admin_permissions_page', view_id=admin.id, _anchor='permission-editor') }}" aria-label="View permissions for {{ admin.name }}" title="View Permissions">◉ <span>View Permissions</span></a>
+                    {% if not admin.super_admin %}
+                      <a class="action-btn small-btn page-access-btn" href="{{ url_for('admin_permissions_page', pages_id=admin.id, search=search_term, role=selected_role, status=selected_status, _anchor='page-permissions') }}" aria-label="Manage page access for {{ admin.name }}" title="Page Permissions">&#9881; <span>Pages</span></a>
+                      <a class="action-btn small-btn icon-action edit-admin-btn" href="{{ url_for('admin_permissions_page', edit_id=admin.id, _anchor='permission-editor') }}" aria-label="Edit {{ admin.name }} permissions" title="Edit permissions">&#9998;</a>
+                      <form method="post" action="{{ url_for('admin_permissions_page') }}" class="inline-form admin-status-form">
+                        <input type="hidden" name="action" value="set_status">
+                        <input type="hidden" name="admin_id" value="{{ admin.id }}">
+                        <input type="hidden" name="account_status" value="{{ 'inactive' if (admin.account_status or 'active') == 'active' else 'active' }}">
+                        <button type="submit" class="action-btn small-btn icon-action status-action-btn" aria-label="{{ 'Disable' if (admin.account_status or 'active') == 'active' else 'Enable' }} {{ admin.name }}" title="{{ 'Disable' if (admin.account_status or 'active') == 'active' else 'Enable' }} admin">&#8856;</button>
+                      </form>
+                      <form method="post" action="{{ url_for('admin_permissions_page') }}" class="inline-form admin-delete-form">
+                        <input type="hidden" name="action" value="delete_admin">
+                        <input type="hidden" name="admin_id" value="{{ admin.id }}">
+                        <button type="submit" class="action-btn small-btn icon-action delete-admin-btn" aria-label="Delete {{ admin.name }}" title="Delete admin" onclick="return confirm('Delete this admin? This action cannot be undone.');">&#128465;</button>
+                      </form>
+                    {% endif %}
+                  </div>
+                </td>
+              </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td colspan="8"><p class="muted text-center">No admins match the current filters.</p></td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% if page_permissions_admin %}
+  <section class="card admin-page-permissions-panel" id="page-permissions">
+    <div class="admin-page-permissions-heading">
+      <div>
+        <h2>Page Permissions - {{ page_permissions_admin.name }}</h2>
+        <p>Manage which pages {{ page_permissions_admin.name }} can access.</p>
+      </div>
+      <a class="close-editor" href="{{ url_for('admin_permissions_page', search=search_term, role=selected_role, status=selected_status) }}" aria-label="Close page permissions" title="Close">×</a>
+    </div>
+    <div class="page-permissions-admin-summary">
+      <span><small>Admin Name</small><strong>{{ page_permissions_admin.name }}</strong></span>
+      <span><small>Username / Email</small><strong>{{ page_permissions_admin.email }}</strong></span>
+      <span><small>Role</small><strong>Admin</strong></span>
+    </div>
+    <form method="post" action="{{ url_for('admin_permissions_page') }}#page-permissions" id="admin-page-permissions-form">
+      <input type="hidden" name="action" value="save_admin_page_permissions">
+      <input type="hidden" name="admin_id" value="{{ page_permissions_admin.id }}">
+      <input type="hidden" name="search" value="{{ search_term }}">
+      <input type="hidden" name="role" value="{{ selected_role }}">
+      <input type="hidden" name="status" value="{{ selected_status }}">
+      <div class="admin-page-permission-actions">
+        <button type="button" class="action-btn small-btn enable-all-pages" id="enable-all-admin-pages">&#10003; Enable All</button>
+        <button type="button" class="action-btn small-btn disable-all-pages" id="disable-all-admin-pages">&#8856; Disable All</button>
+        <button type="submit" class="action-btn small-btn primary-btn save-page-permissions">&#128190; Save Permissions</button>
+      </div>
+      <div class="table-wrap page-permission-table-wrap">
+        <table class="data-table page-permission-table">
+          <thead><tr><th>Page Name</th><th>Status</th></tr></thead>
+          <tbody>
+            {% for page in page_permission_rows %}
+            <tr>
+              <td><strong>{{ page.name }}</strong><small>{{ page.url }}</small></td>
+              <td>
+                <label class="admin-page-permission-toggle">
+                  <input type="checkbox" name="page_perm_{{ page.key }}" {% if page.is_enabled %}checked{% endif %} aria-label="{{ page.name }} access">
+                  <span class="admin-page-toggle-track" aria-hidden="true"><span></span></span>
+                  <span class="admin-page-toggle-status">{{ 'Enabled' if page.is_enabled else 'Disabled' }}</span>
+                </label>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </form>
+    <p class="page-permission-note"><span aria-hidden="true">&#9432;</span> Disabled pages are hidden from this admin's navigation and blocked at the backend.</p>
+  </section>
+  {% endif %}
+  </div>
+</div>
+
+<script>
+  const createAdminDialog = document.getElementById('admin-create-dialog');
+  const openAdminCreate = document.getElementById('open-admin-create');
+  const closeAdminCreate = document.getElementById('close-admin-create');
+  const cancelAdminCreate = document.getElementById('cancel-admin-create');
+  const permissionFilterForm = document.querySelector('.admin-permission-filters');
+
+  if (createAdminDialog && openAdminCreate) {
+    openAdminCreate.addEventListener('click', () => createAdminDialog.showModal());
+  }
+  [closeAdminCreate, cancelAdminCreate].forEach((button) => {
+    if (button) button.addEventListener('click', () => createAdminDialog.close());
+  });
+  if (permissionFilterForm) {
+    permissionFilterForm.querySelectorAll('select').forEach((select) => {
+      select.addEventListener('change', () => permissionFilterForm.requestSubmit());
+    });
+  }
+
+  const selectAllBtn = document.getElementById('select-all-permissions');
+  const clearAllBtn = document.getElementById('clear-all-permissions');
+  const resetBtn = document.getElementById('reset-permissions');
+  const permissionCheckboxes = document.querySelectorAll('.permission-check input');
+
+  if (selectAllBtn) {
+    selectAllBtn.addEventListener('click', () => {
+      permissionCheckboxes.forEach((input) => {
+        input.checked = true;
+      });
+    });
+  }
+
+  if (clearAllBtn) {
+    clearAllBtn.addEventListener('click', () => {
+      permissionCheckboxes.forEach((input) => {
+        input.checked = false;
+      });
+    });
+  }
+
+  if (resetBtn) {
+    resetBtn.addEventListener('click', () => {
+      permissionCheckboxes.forEach((input) => {
+        const defaultValue = input.dataset.defaultChecked === 'true';
+        input.checked = defaultValue;
+      });
+    });
+  }
+
+  permissionCheckboxes.forEach((checkbox) => {
+    checkbox.dataset.defaultChecked = checkbox.checked ? 'true' : 'false';
+  });
+
+  const adminPagePermissionForm = document.getElementById('admin-page-permissions-form');
+  const adminPagePermissionCheckboxes = adminPagePermissionForm?.querySelectorAll('input[type="checkbox"]') || [];
+  const enableAllAdminPages = document.getElementById('enable-all-admin-pages');
+  const disableAllAdminPages = document.getElementById('disable-all-admin-pages');
+
+  function updateAdminPagePermissionLabel(checkbox) {
+    const status = checkbox.closest('.admin-page-permission-toggle').querySelector('.admin-page-toggle-status');
+    status.textContent = checkbox.checked ? 'Enabled' : 'Disabled';
+  }
+
+  adminPagePermissionCheckboxes.forEach((checkbox) => {
+    checkbox.addEventListener('change', () => updateAdminPagePermissionLabel(checkbox));
+  });
+  [enableAllAdminPages, disableAllAdminPages].forEach((button) => {
+    if (!button) return;
+    button.addEventListener('click', () => {
+      const enabled = button === enableAllAdminPages;
+      adminPagePermissionCheckboxes.forEach((checkbox) => {
+        checkbox.checked = enabled;
+        updateAdminPagePermissionLabel(checkbox);
+      });
+    });
+  });
+</script>
+{% endblock %}

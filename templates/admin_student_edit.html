@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Update Student{% endblock %}
+{% block content %}
+<div class="page-heading">
+  <div>
+    <h1>Update Student</h1>
+    <p class="muted">Edit the student's account and course enrollment.</p>
+  </div>
+</div>
+
+<div class="card narrow">
+  <form method="post">
+    <label for="student-id">Student ID</label>
+    <input id="student-id" type="text" name="student_id" value="{{ student.student_id or '' }}" required>
+
+    <label for="student-name">Full Name</label>
+    <input id="student-name" type="text" name="name" value="{{ student.name }}" required>
+
+    <label for="student-email">Email</label>
+    <input id="student-email" type="email" name="email" value="{{ student.email }}" maxlength="255" autocomplete="email" required>
+
+    <label for="student-mobile">Mobile No</label>
+    <input id="student-mobile" type="tel" name="mobile_no" value="{{ student.mobile_no or '' }}" inputmode="numeric" pattern="[0-9]{10}" minlength="10" maxlength="10" title="Enter exactly 10 digits without spaces or symbols." autocomplete="tel" required>
+
+    <label for="student-course">Course</label>
+    <select id="student-course" name="course_id" required>
+      {% for course in courses %}
+        <option value="{{ course.id }}" {% if student.course_id == course.id %}selected{% endif %}>
+          {{ course.name|course_label(course.year) }}
+        </option>
+      {% endfor %}
+    </select>
+
+    <label for="student-section">Section</label>
+    <select id="student-section" name="section" required>
+      {% for section in ['A', 'B', 'C', 'D', 'E', 'F', 'G'] %}
+        <option value="{{ section }}" {% if student.section == section %}selected{% endif %}>{{ section }}</option>
+      {% endfor %}
+    </select>
+
+    <button type="submit">Save Changes</button>
+  </form>
+</div>
+{% endblock %}

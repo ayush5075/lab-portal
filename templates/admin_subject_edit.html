@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Update Subject{% endblock %}
+{% block body_class %}management-page admin-fullscreen-page{% endblock %}
+{% block content %}
+<div class="management-shell">
+  <main class="management-main">
+    <div class="page-heading">
+      <div>
+        <h1>Update Subject</h1>
+        <p class="muted">Edit the selected subject name.</p>
+      </div>
+      <a class="management-secondary-btn" href="{{ url_for('admin_subjects') }}">Back to Subjects</a>
+    </div>
+    <section class="management-panel subject-edit-panel">
+      <div class="subject-assigned-courses">
+        <h2>Assigned Courses</h2>
+        {% if assigned_courses %}
+          <div class="assigned-course-list">
+            {% for course in assigned_courses %}
+              <span class="assigned-course-item">
+                <select class="assigned-course-select" aria-label="Assigned course">
+                  <option selected>{{ course.name|course_label(course.year) }}</option>
+                </select>
+                <form method="post" action="{{ url_for('admin_remove_subject_course', subject_id=subject.id, course_id=course.id) }}">
+                  <button type="submit" class="assigned-course-remove" aria-label="Remove {{ course.name|course_label(course.year) }} from {{ subject.name }}"></button>
+                </form>
+              </span>
+            {% endfor %}
+          </div>
+        {% else %}
+          <p class="muted">This subject is not assigned to any course yet.</p>
+        {% endif %}
+      </div>
+      <form method="post" class="management-form">
+        <label for="subject-name">Subject Name</label>
+        <input id="subject-name" type="text" name="name" value="{{ subject.name }}" required autofocus>
+        <div class="management-actions">
+          <a class="management-secondary-btn" href="{{ url_for('admin_subjects') }}">Cancel</a>
+          <button class="management-primary-btn" type="submit">Update Subject</button>
+        </div>
+      </form>
+    </section>
+  </main>
+</div>
+{% endblock %}

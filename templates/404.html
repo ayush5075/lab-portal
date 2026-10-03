@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block title %}Page Not Found{% endblock %}
+
+{% block content %}
+  <section class="auth-panel error-panel">
+    <div class="error-card">
+      <p class="eyebrow">Lab Portal</p>
+      <h1>Page Not Found</h1>
+      <p>The page you requested is not available or may have moved.</p>
+      <div class="auth-actions">
+        <a class="primary-button" href="{{ url_for('index') }}">Return to Home</a>
+      </div>
+    </div>
+  </section>
+{% endblock %}

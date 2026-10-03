@@ -1,0 +1,7 @@
+{
+    "chat.byokUtilityModelDefault": "copilot",
+    "python.defaultInterpreterPath": "${workspaceFolder}\\.venv\\Scripts\\python.exe",
+    "code-runner.executorMap": {
+        "python": "\"$pythonPath\" -u"
+    }
+}

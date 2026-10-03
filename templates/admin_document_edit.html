@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Update Document{% endblock %}
+{% block content %}
+<h1>Update Document</h1>
+
+<div class="card">
+  <form method="post" action="{{ url_for('admin_update_document', doc_id=document.id) }}" enctype="multipart/form-data">
+    <label>Title</label>
+    <input type="text" name="title" value="{{ document.title }}" required>
+
+    <label>Course</label>
+    <select name="course_id" required>
+      {% for course in courses %}
+        <option value="{{ course.id }}" {% if course.id == document.course_id %}selected{% endif %}>{{ course.name|course_label(course.year) }}</option>
+      {% endfor %}
+    </select>
+
+    <label>Replace File (optional)</label>
+    <input type="file" name="file">
+
+    <button type="submit">Save Changes</button>
+  </form>
+  <p><a href="{{ url_for('admin_show_document', doc_id=document.id) }}">Cancel</a></p>
+</div>
+{% endblock %}

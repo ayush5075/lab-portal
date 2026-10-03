@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+{% block title %}Device Management{% endblock %}
+{% block body_class %}device-management-page{% endblock %}
+{% block content %}
+<div class="device-shell">
+  <main class="device-main">
+    <header class="device-topbar">
+      <div>
+        <span class="device-breadcrumb">Manage / Devices</span>
+        <h1>Device Management</h1>
+        <p>Monitor, register and control all lab computers.</p>
+      </div>
+      <div class="device-header-actions">
+        <label class="device-global-search"><span>Q</span><input id="device-global-search" type="search" placeholder="Search PC, IP or asset tag"></label>
+      </div>
+    </header>
+
+    <section class="device-stat-grid">
+      <div class="device-stat total"><span class="stat-icon">+</span><div><small>Total PCs</small><strong>{{ device_stats.total }}</strong><em>Registered Devices</em></div></div>
+      <div class="device-stat active"><span class="stat-icon">OK</span><div><small>Active</small><strong>{{ device_stats.active }}</strong><em>Available for Login</em></div></div>
+      <div class="device-stat locked"><span class="stat-icon">!</span><div><small>Locked</small><strong>{{ device_stats.locked }}</strong><em>Currently in use</em></div></div>
+      <div class="device-stat deactivated"><span class="stat-icon">OFF</span><div><small>Deactivated</small><strong>{{ device_stats.deactivated }}</strong><em>Manually Disabled</em></div></div>
+    </section>
+
+    <div class="device-content-grid">
+      <section class="device-table-panel">
+        <div class="device-panel-heading">
+          <div><h2>Lab Device Register</h2><p>Manage lab PCs, monitor status and control availability.</p></div>
+        </div>
+        <div class="device-table-tools"><input id="device-search" type="search" placeholder="Search PC, MAC or IP..."><select id="device-status-filter"><option value="all">All statuses</option><option value="active">Active</option><option value="inactive">Deactivated</option></select></div>
+        <div class="device-table-wrap">
+          <table class="device-table">
+            <thead><tr><th>#</th><th>PC Name</th><th>MAC Address</th><th>IP Address</th><th>Lab</th><th>Status</th><th>Current Student</th><th>Lock Until</th><th>Action</th></tr></thead>
+            <tbody id="device-table-body">
+              {% for device in devices %}
+                <tr data-device-row data-status="{% if device.is_active %}active{% else %}inactive{% endif %}" data-search="{{ device.display_name }} {{ device.name }} {{ device.asset_tag }} {{ device.ip_address or '' }} {{ device.location or '' }}">
+                  <td>{{ loop.index }}</td><td><strong>{{ device.display_name }}</strong></td><td>{{ device.asset_tag }}</td><td>{{ device.ip_address or '-' }}</td><td>{{ device.location or '-' }}</td>
+                  <td><span class="device-status {% if device.lock_until and device.lock_until > now_utc %}status-locked{% elif device.is_active %}status-active{% else %}status-inactive{% endif %}">{% if device.lock_until and device.lock_until > now_utc %}LOCKED{% elif device.is_active %}ACTIVE{% else %}DEACTIVATED{% endif %}</span></td>
+                  <td>{{ device.current_student_name or '-' }}</td>
+                  <td><small class="device-lock-countdown" {% if device.lock_until and device.lock_until > now_utc %}data-lock-until="{{ device.lock_until }}"{% endif %}>{% if device.lock_until and device.lock_until > now_utc %}Calculating...{% else %}-{% endif %}</small></td>
+                  <td>
+                    <div class="device-actions">
+                      {% if device.lock_until and device.lock_until > now_utc %}
+                        <form method="post" action="{{ url_for('admin_release_device', device_id=device.id) }}"><button class="device-action-btn device-unlock-btn" type="submit">Release</button></form>
+                      {% else %}
+                        <form method="post" action="{{ url_for('admin_toggle_device', device_id=device.id) }}"><button class="device-action-btn {% if device.is_active %}device-delete-btn{% else %}device-unlock-btn device-activate-btn{% endif %}" type="submit">{% if device.is_active %}Deactivate{% else %}Activate{% endif %}</button></form>
+                      {% endif %}
+                      <form method="post" action="{{ url_for('admin_delete_device', device_id=device.id) }}" onsubmit="return confirm('Delete this device permanently?');">
+                        <button class="device-action-btn device-delete-btn" type="submit" title="Delete device">Delete</button>
+                      </form>
+                    </div>
+                  </td>
+                </tr>
+              {% else %}
+                <tr><td colspan="9" class="device-empty">No devices registered.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <aside class="device-control-column">
+        <section class="device-control-panel device-status-overview">
+          <div class="device-panel-heading compact"><div><h2>Device Status Overview</h2><p>Current lab computer status.</p></div></div>
+          <div class="status-overview-total"><strong>{{ device_stats.total }}</strong><span>Total PCs</span></div>
+          <div class="status-overview-row"><span><i class="status-dot active"></i>Active</span><strong>{{ device_stats.active }}</strong></div>
+          <div class="status-overview-row"><span><i class="status-dot locked"></i>Locked</span><strong>{{ device_stats.locked }}</strong></div>
+          <div class="status-overview-row"><span><i class="status-dot deactivated"></i>Deactivated</span><strong>{{ device_stats.deactivated }}</strong></div>
+        </section>
+        <section class="device-control-panel device-lock-settings">
+          <div class="settings-box">
+            <div class="setting-title">PC Lock Duration</div>
+            <div class="setting-label">Set lock time for attendance</div>
+            <form method="post" action="{{ url_for('admin_device_settings') }}" id="lock-settings-form">
+              <div class="duration-buttons">
+                {% for duration in [5, 10, 15, 20, 30] %}
+                  <button type="button" class="duration-option {% if lock_minutes == duration %}selected{% endif %}" data-duration="{{ duration }}">{{ duration }}</button>
+                {% endfor %}
+                <button type="button" class="duration-option" id="custom-duration-button">Custom</button>
+              </div>
+              <input class="custom-duration-input" id="custom-duration" type="number" min="1" max="240" placeholder="Minutes" aria-label="Custom lock duration">
+              <input type="hidden" name="lock_minutes" id="lock-minutes" value="{{ lock_minutes }}">
+              <div class="info">Current Lock Time: <b><span id="currentLock">{{ lock_minutes }}</span> minutes</b><br>This will be applied for new lock events.</div>
+              <button class="btn btn-blue save-btn" type="submit">Save Settings</button>
+            </form>
+          </div>
+          <div class="next-lock-timer" {% if next_lock_until %}data-lock-until="{{ next_lock_until }}"{% endif %}>{% if next_lock_until %}Next release in <strong>calculating...</strong>{% else %}No active lock timer{% endif %}</div>
+        </section>
+        <section class="device-control-panel quick-actions">
+          <div class="device-panel-heading compact"><div><h2>Quick Actions</h2><p>Common device controls.</p></div></div>
+          <a href="#device-search" class="quick-action blue">Add Device</a>
+          <a href="#device-search" class="quick-action blue" data-device-action="active">View Active</a>
+          <a href="#device-search" class="quick-action red" data-device-action="inactive">View Deactivated</a>
+          <a href="#device-search" class="quick-action purple">Search Devices</a>
+        </section>
+      </aside>
+    </div>
+
+    <div class="device-bottom-grid">
+      <section class="device-bottom-panel"><h2>Recent Device Activity</h2><div class="activity-row"><span class="activity-dot green"></span><div><strong>Device register loaded</strong><small>{{ device_stats.total }} devices available in the system</small></div><time>Now</time></div><div class="activity-row"><span class="activity-dot blue"></span><div><strong>Availability monitoring active</strong><small>Use the table actions to change device status</small></div><time>Live</time></div></section>
+      <section class="device-bottom-panel"><h2>Management Notes</h2><p class="device-note">Active devices are available for lab use. Deactivated devices remain registered but cannot be selected until activated again.</p><a href="{{ url_for('admin_panel') }}" class="device-text-link">Back to Admin Dashboard</a></section>
+    </div>
+  </main>
+</div>
+<script>
+  const searchInput = document.getElementById("device-search");
+  const globalSearchInput = document.getElementById("device-global-search");
+  const statusFilter = document.getElementById("device-status-filter");
+  function filterDevices() {
+    const term = searchInput.value.toLowerCase().trim();
+    const status = statusFilter.value;
+    document.querySelectorAll("[data-device-row]").forEach((row) => {
+      row.hidden = (term && !row.dataset.search.toLowerCase().includes(term)) || (status !== "all" && row.dataset.status !== status);
+    });
+  }
+  searchInput.addEventListener("input", filterDevices);
+  globalSearchInput.addEventListener("input", () => {
+    searchInput.value = globalSearchInput.value;
+    filterDevices();
+  });
+  statusFilter.addEventListener("change", filterDevices);
+
+  document.querySelectorAll("[data-device-action]").forEach((action) => {
+    action.addEventListener("click", () => {
+      statusFilter.value = action.dataset.deviceAction;
+      filterDevices();
+    });
+  });
+
+  function updateDeviceLocks() {
+    document.querySelectorAll(".device-lock-countdown").forEach((element) => {
+      if (!element.dataset.lockUntil) return;
+      const remaining = Math.max(0, new Date(element.dataset.lockUntil.replace(" ", "T") + "Z").getTime() - Date.now());
+      const totalMinutes = Math.floor(remaining / 60000);
+      const seconds = Math.floor((remaining % 60000) / 1000);
+      element.textContent = remaining > 0 ? `Auto release in ${totalMinutes}m ${String(seconds).padStart(2, "0")}s` : "Ready to release";
+    });
+    const nextLockTimer = document.querySelector(".next-lock-timer[data-lock-until]");
+    if (nextLockTimer) {
+      const remaining = Math.max(0, new Date(nextLockTimer.dataset.lockUntil.replace(" ", "T") + "Z").getTime() - Date.now());
+      const totalMinutes = Math.floor(remaining / 60000);
+      const seconds = Math.floor((remaining % 60000) / 1000);
+      nextLockTimer.innerHTML = remaining > 0
+        ? `Next release in <strong>${totalMinutes}m ${String(seconds).padStart(2, "0")}s</strong>`
+        : "Next release is ready";
+    }
+  }
+  updateDeviceLocks();
+  setInterval(updateDeviceLocks, 1000);
+
+  const lockMinutes = document.getElementById("lock-minutes");
+  const currentLock = document.getElementById("currentLock");
+  const customDuration = document.getElementById("custom-duration");
+  function setLockDuration(minutes) {
+    const value = Math.max(1, Math.min(240, Number(minutes) || 15));
+    lockMinutes.value = value;
+    currentLock.textContent = value;
+    document.querySelectorAll(".duration-option").forEach((button) => {
+      button.classList.toggle("selected", Number(button.dataset.duration) === value);
+    });
+  }
+  document.querySelectorAll(".duration-option[data-duration]").forEach((button) => {
+    button.addEventListener("click", () => setLockDuration(button.dataset.duration));
+  });
+  document.getElementById("custom-duration-button").addEventListener("click", () => {
+    customDuration.style.display = "block";
+    customDuration.focus();
+  });
+  customDuration.addEventListener("input", () => {
+    if (customDuration.value) setLockDuration(customDuration.value);
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block title %}Something Went Wrong{% endblock %}
+
+{% block content %}
+  <section class="auth-panel error-panel">
+    <div class="error-card">
+      <p class="eyebrow">Lab Portal</p>
+      <h1>Something Went Wrong</h1>
+      <p>We ran into an unexpected issue while loading this page. Please try again in a moment.</p>
+      <div class="auth-actions">
+        <a class="primary-button" href="{{ url_for('index') }}">Return to Home</a>
+      </div>
+    </div>
+  </section>
+{% endblock %}

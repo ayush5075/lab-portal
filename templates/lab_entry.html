@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Enter Lab Key{% endblock %}
+{% block content %}
+<div class="card">
+  <h2>Enter Lab Key</h2>
+  <p class="muted">Mark attendance with a 6-digit lab session code.</p>
+  <form method="post" action="{{ url_for('lab_enter') }}">
+    <label for="dashboard-lab-code">6-Digit Code</label>
+    <input id="dashboard-lab-code" type="text" name="code" pattern="\d{6}" maxlength="6" inputmode="numeric" placeholder="123456" required autofocus>
+    <button type="submit">Mark Attendance</button>
+  </form>
+</div>
+{% endblock %}

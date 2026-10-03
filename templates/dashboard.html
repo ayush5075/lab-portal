@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block body_class %}student-dashboard-page{% endblock %}
+{% block content %}
+<h1>Welcome, {{ current_user.name[:1]|upper }}{{ current_user.name[1:] }}</h1>
+
+{% if course %}
+  <p class="muted">Enrolled in: <strong>{{ course.name|course_label(course.year) }}</strong></p>
+{% else %}
+  <p class="muted">You're not enrolled in a course yet. Contact an admin.</p>
+{% endif %}
+
+<div class="grid two dashboard-actions">
+  <div class="card">
+    <h2>Enter Lab Key</h2>
+    <p class="muted">Enter your 6-digit Lab Key.</p>
+    <form method="post" action="{{ url_for('lab_enter') }}" class="dashboard-otp-form">
+      <label for="dashboard-otp-1">6-Digit Code</label>
+      <div class="dashboard-otp-box">
+        {% for index in range(1, 7) %}
+          <input id="dashboard-otp-{{ index }}" class="dashboard-otp-input" type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" aria-label="Lab Key digit {{ index }}" required>
+        {% endfor %}
+      </div>
+      <input id="dashboard-lab-code" type="hidden" name="code">
+      <button type="submit">Mark Attendance</button>
+    </form>
+  </div>
+  <div class="card">
+    <h2>Course Documents</h2>
+    {% if documents %}
+      <table>
+        <tr><th>Title</th><th>Section</th><th>Uploaded</th><th></th></tr>
+        {% for document in documents %}
+          <tr>
+            <td>{{ document.title }}</td>
+            <td><strong>{{ document.course_name|course_label(document.course_year) }}</strong></td>
+            <td>{{ document.uploaded_at|ist }}</td>
+            <td><a class="action-btn" href="{{ url_for('download_document', doc_id=document.id) }}">Download</a></td>
+          </tr>
+        {% endfor %}
+      </table>
+    {% else %}
+      <p class="muted">No documents available for your course yet.</p>
+    {% endif %}
+  </div>
+</div>
+
+<h2>Active Lab Sessions For Your Course</h2>
+{% if sessions %}
+  <table>
+    <tr><th>Started</th><th>Expires</th><th>Time Left</th></tr>
+    {% for s in sessions %}
+      <tr>
+        <td>{{ s.created_at|ist }}</td>
+        <td>{{ s.expires_at|ist }}</td>
+        <td class="countdown" data-expires="{{ s.expires_at }}">Calculating...</td>
+      </tr>
+    {% endfor %}
+  </table>
+{% else %}
+  <p class="muted">No active lab session right now.</p>
+{% endif %}
+<script>
+  const otpForm = document.querySelector(".dashboard-otp-form");
+  const otpInputs = [...document.querySelectorAll(".dashboard-otp-input")];
+  const otpCode = document.getElementById("dashboard-lab-code");
+
+  otpInputs.forEach((input, index) => {
+    input.addEventListener("input", () => {
+      input.value = input.value.replace(/[^0-9]/g, "").slice(-1);
+      if (input.value && index < otpInputs.length - 1) otpInputs[index + 1].focus();
+    });
+
+    input.addEventListener("keydown", (event) => {
+      if (event.key === "Backspace" && !input.value && index > 0) otpInputs[index - 1].focus();
+    });
+
+    input.addEventListener("paste", (event) => {
+      event.preventDefault();
+      const pasted = event.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
+      pasted.split("").forEach((digit, digitIndex) => { otpInputs[digitIndex].value = digit; });
+      if (pasted) otpInputs[Math.min(pasted.length, 6) - 1].focus();
+    });
+  });
+
+  otpForm.addEventListener("submit", () => {
+    otpCode.value = otpInputs.map((input) => input.value).join("");
+  });
+
+  function updateSessionCountdowns() {
+    document.querySelectorAll(".countdown").forEach((element) => {
+      const expiry = new Date(element.dataset.expires.replace(" ", "T") + "Z");
+      const remaining = Math.max(0, expiry.getTime() - Date.now());
+      const totalSeconds = Math.floor(remaining / 1000);
+      const hours = Math.floor(totalSeconds / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      const seconds = totalSeconds % 60;
+
+      if (remaining <= 0) {
+        element.textContent = "Expired";
+        element.classList.add("expired");
+        return;
+      }
+
+      element.textContent = `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+    });
+  }
+
+  updateSessionCountdowns();
+  setInterval(updateSessionCountdowns, 1000);
+</script>
+{% endblock %}

@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Documents{% endblock %}
+{% block body_class %}documents-page{% endblock %}
+{% block content %}
+<h1>Course Documents</h1>
+{% if documents %}
+  <table>
+    <tr><th>Title</th><th>Course</th><th>Section</th><th>Uploaded</th><th></th></tr>
+    {% for doc in documents %}
+      <tr>
+        <td>{{ doc.title }}</td>
+        <td>{{ doc.course_name|course_label(doc.course_year) }}</td>
+        <td>{{ doc.uploaded_at|ist }}</td>
+        <td><a href="{{ url_for('download_document', doc_id=doc.id) }}">Download</a></td>
+      </tr>
+    {% endfor %}
+  </table>
+{% else %}
+  <p class="muted">No documents available yet.</p>
+{% endif %}
+{% endblock %}

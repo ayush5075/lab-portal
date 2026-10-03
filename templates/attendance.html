@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}Attendance{% endblock %}
+{% block body_class %}attendance-page student-attendance-page{% endblock %}
+{% block content %}
+<div class="attendance-register student-attendance-register">
+  <section class="attendance-banner">
+    <div class="attendance-banner-student student-identity">
+      <div class="student-avatar">{{ current_user.name[:1]|upper }}</div>
+      <div>
+        <span>Student Name</span>
+        <strong>{{ current_user.name[:1]|upper }}{{ current_user.name[1:] }}</strong>
+        <small>Roll No. : {{ current_user.student_id or '-' }}</small>
+      </div>
+    </div>
+    <div class="attendance-banner-copy">
+      <p class="attendance-kicker">STUDENT COMPUTER LAB</p>
+      <h1>{% if course %}{{ course.name|course_label(course.year) }}{% else %}Programming Lab{% endif %}</h1>
+      <div class="attendance-banner-subtitle">30 Day Attendance Register</div>
+    </div>
+    <div class="attendance-banner-side">
+      <div class="attendance-side-item"><span class="attendance-side-icon">📅</span> Section : {{ current_user.section or '-' }}</div>
+      <div class="attendance-side-item"><span class="attendance-side-icon">🗓️</span> Month : {{ selected_month }}</div>
+      <div class="attendance-side-item"><span class="attendance-side-icon">📚</span> Course : {% if course %}{{ course.name|course_label(course.year) }}{% else %}Not enrolled{% endif %}</div>
+    </div>
+  </section>
+
+  <section class="student-summary-bar attendance-student-summary">
+    <div class="student-subject">
+      <span class="summary-label">📖 Subjects</span>
+      <strong>{{ subject_attendance|length }} subject(s)</strong>
+    </div>
+    <form method="get" class="student-attendance-filter">
+      <label for="attendance-month">Month</label>
+      <select id="attendance-month" name="month">
+        {% for month_value, month_name in available_months %}
+          <option value="{{ month_value }}" {% if selected_month == month_value %}selected{% endif %}>{{ month_name }}</option>
+        {% endfor %}
+      </select>
+      <button type="submit">View Attendance</button>
+    </form>
+    <div class="attendance-user-percentage">
+      <span>Overall Attendance</span>
+      <strong>{{ attendance_percentage }}%</strong>
+    </div>
+  </section>
+
+  {% if subject_attendance %}
+  <section class="subject-attendance-register">
+    <div class="subject-attendance-heading"><div><span class="summary-label">Subject Attendance</span><h2>{{ month_label }}</h2></div><div class="subject-attendance-metric"><div class="attendance-user-percentage"><span>Overall Attendance</span><strong>{{ subject_attendance_percentage }}%</strong></div><small>{{ subject_present_count }} Present / {{ subject_absent_count }} Absent</small></div></div>
+  <div class="attendance-table-wrap">
+    <table class="attendance-register-table student-register-table">
+      <thead>
+        <tr>
+          <th rowspan="2">S.No.</th><th rowspan="2">Date</th><th rowspan="2">Day</th><th rowspan="2">Subject</th>
+          <th colspan="{{ days|length }}">Attendance (Days)</th>
+          <th rowspan="2">Present<br>Count</th><th rowspan="2">Absent<br>Count</th>
+        </tr>
+        <tr>{% for day in days %}<th>{{ day }}</th>{% endfor %}</tr>
+      </thead>
+      <tbody>
+        {% for subject_record in subject_attendance %}
+        <tr>
+          <td>{{ loop.index }}</td>
+          <td>{{ selected_month }}-01<br>to {{ selected_month }}-{{ '%02d'|format(days|list|last) }}</td>
+          <td>{{ month_label }}</td>
+          <td>{{ subject_record.name }}</td>
+          {% for day in days %}
+            <td>{% if subject_record.marks.get(day) %}<span class="attendance-present">{{ subject_record.marks[day].time }}</span>{% else %}<span class="attendance-absent">A</span>{% endif %}</td>
+          {% endfor %}
+          <td class="total-cell">{{ subject_record.present_count }}</td>
+          <td class="total-cell">{{ subject_record.absent_count }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  </section>
+  {% else %}
+    <div class="attendance-empty">No subjects are assigned to your course yet.</div>
+  {% endif %}
+
+  <div class="attendance-legend student-attendance-legend">
+    <span><strong class="attendance-present legend-mark">09:00</strong> = Present (with Time)</span>
+    <span><strong class="attendance-absent legend-mark">A</strong> = Absent</span>
+    <span class="attendance-note"><strong>ⓘ Note:</strong> Present time is shown in India Standard Time.</span>
+  </div>
+</div>
+{% endblock %}

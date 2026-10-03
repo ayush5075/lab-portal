@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% block title %}View Attendance{% endblock %}
+{% block body_class %}attendance-page admin-fullscreen-page{% endblock %}
+{% block content %}
+<div class="attendance-register">
+  <div class="attendance-banner">
+    <div class="attendance-banner-copy">
+      <p class="attendance-kicker">STUDENT COMPUTER LAB</p>
+      <h1>{{ selected_course_name or 'Programming Lab' }}</h1>
+      <div class="attendance-banner-subtitle">30 Day Attendance Register</div>
+    </div>
+    <div class="attendance-banner-side">
+      <div class="attendance-side-item"><span class="attendance-side-icon">📅</span> Batch : {{ selected_course_id or 'All' }}</div>
+      <div class="attendance-side-item"><span class="attendance-side-icon">🗓️</span> Month : {{ selected_month }}</div>
+      <div class="attendance-side-item"><span class="attendance-side-icon">📚</span> Course : {{ selected_course_name or 'All courses' }}</div>
+    </div>
+  </div>
+
+  <div class="card attendance-filters">
+    <form method="get" class="attendance-filter-form">
+      <div>
+        <label for="attendance-course">Course / Lab</label>
+        <select id="attendance-course" name="course_id">
+          <option value="">All courses</option>
+          {% for course in courses %}
+            <option value="{{ course.id }}" {% if selected_course_id == course.id|string %}selected{% endif %}>
+              {{ course.name|course_label(course.year) }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label for="attendance-section">Section</label>
+        <select id="attendance-section" name="section">
+          <option value="">All sections</option>
+          {% for section in ['A', 'B', 'C', 'D', 'E', 'F', 'G'] %}
+            <option value="{{ section }}" {% if selected_section == section %}selected{% endif %}>{{ section }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label for="attendance-month">Month</label>
+        <input id="attendance-month" type="month" name="month" value="{{ selected_month }}">
+      </div>
+      <div>
+        <label for="attendance-student">Student</label>
+        <input id="attendance-student" type="text" name="student_id" value="{{ selected_student_id }}" placeholder="Enter Student ID">
+      </div>
+      <div>
+        <label for="attendance-subject">Subject</label>
+        <div class="attendance-subject-controls">
+          <select id="attendance-subject" name="subject_id">
+            <option value="">All subjects</option>
+            {% for subject in subjects %}
+              <option value="{{ subject.id }}" {% if selected_subject_id == subject.id|string %}selected{% endif %}>{{ subject.name }}</option>
+            {% endfor %}
+          </select>
+          <button type="submit">View Attendance</button>
+          <a class="excel-btn export-excel-btn attendance-export-btn" href="{{ url_for('admin_export_attendance', view='attendance', course_id=selected_course_id, section=selected_section, subject_id=selected_subject_id, student_id=selected_student_id, month=selected_month, _external=True) }}">&#128228; Export Attendance</a>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <div class="attendance-overview-cards">
+    <div class="attendance-info-card">
+      <div class="attendance-card-label">Course / Lab</div>
+      <div class="attendance-card-value">{{ selected_course_name or 'All courses' }}</div>
+    </div>
+    <div class="attendance-info-card">
+      <div class="attendance-card-label">Subject</div>
+      <div class="attendance-card-value">{{ selected_subject_name or 'All subjects' }}</div>
+    </div>
+    <div class="attendance-info-card attendance-summary-card">
+      <div class="attendance-card-label">Attendance Summary</div>
+      <div class="attendance-summary-grid">
+        <div>
+          <span class="summary-head">Present</span>
+          <strong>{{ matrix|sum(attribute='present_count') }}</strong>
+        </div>
+        <div>
+          <span class="summary-head">Absent</span>
+          <strong>{{ matrix|sum(attribute='absent_count') }}</strong>
+        </div>
+        <div>
+          <span class="summary-head">Percentage</span>
+          <strong>{{ ((matrix|sum(attribute='present_count') / (matrix|length or 1)) * 100) if matrix else 0|round }}%</strong>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="attendance-table-wrap">
+    {% if matrix %}
+      <table class="attendance-register-table">
+        <thead>
+          <tr>
+            <th rowspan="2">S.No.</th><th rowspan="2">Roll No.</th><th rowspan="2">Student Name</th><th rowspan="2">Section</th>
+            <th colspan="{{ days|length }}">Attendance (Days)</th>
+            <th rowspan="2">Total<br>Present</th><th rowspan="2">Total<br>Absent</th><th rowspan="2">Attendance<br>%</th>
+          </tr>
+          <tr>{% for day in days %}<th>{{ day }}</th>{% endfor %}</tr>
+        </thead>
+        <tbody>
+          {% for row in matrix %}
+            <tr>
+              <td>{{ loop.index }}</td><td>{{ row.student.student_id or '-' }}</td><td class="student-name">{{ row.student.name[:1]|upper }}{{ row.student.name[1:] }}<span class="student-email">{{ row.student.email }}</span></td><td>{{ row.student.section or '-' }}</td>
+              {% for day in days %}
+                <td>{% if row.marks.get(day) %}<span class="attendance-present">{{ row.marks.get(day) }}</span>{% else %}<span class="attendance-absent">A</span>{% endif %}</td>
+              {% endfor %}
+              <td class="total-cell">{{ row.present_count }}</td><td class="total-cell">{{ row.absent_count }}</td><td class="total-cell">{{ row.percentage }}%</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <div class="attendance-empty">No attendance records found for the selected course and month.</div>
+    {% endif %}
+  </div>
+
+  <div class="attendance-legend">
+    <span><strong class="attendance-present legend-mark">09:00</strong> Present (with time)</span>
+    <span><strong class="attendance-absent legend-mark">A</strong> Absent</span>
+    <span class="muted">Times are shown in India Standard Time.</span>
+  </div>
+</div>
+{% endblock %}

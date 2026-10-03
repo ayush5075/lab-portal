@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Attendance{% endblock %}
+{% block content %}
+<h1>{{ session.course_name|course_label(session.course_year) }} Attendance — Key {{ session.code }}</h1>
+<p class="muted">Session started {{ session.created_at|ist }}, expires {{ session.expires_at|ist }}</p>
+
+{% if records %}
+  <table>
+    <tr><th>Student</th><th>Email</th><th>Section</th><th>Marked At</th></tr>
+    {% for r in records %}
+      <tr>
+        <td>{{ r.student_name }}</td>
+        <td>{{ r.student_email }}</td>
+        <td>{{ r.student_section or '-' }}</td>
+        <td>{{ r.timestamp|ist }}</td>
+      </tr>
+    {% endfor %}
+  </table>
+{% else %}
+  <p class="muted">No one has checked in yet.</p>
+{% endif %}
+
+{% endblock %}
