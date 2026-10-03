@@ -18,6 +18,7 @@ from flask import (
 import openpyxl
 import xlrd
 from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.utils import secure_filename
 
 from config import Config
@@ -335,6 +336,11 @@ def read_student_import(file_storage):
 def create_app(config_class=Config, db_path=None):
     app = Flask(__name__)
     app.config.from_object(config_class)
+    trusted_proxy_count = app.config["TRUSTED_PROXY_COUNT"]
+    if trusted_proxy_count < 0:
+        raise ValueError("TRUSTED_PROXY_COUNT must be non-negative.")
+    if trusted_proxy_count:
+        app.wsgi_app = ProxyFix(app.wsgi_app, x_for=trusted_proxy_count)
     if db_path:
         app.config["DB_PATH"] = db_path
     os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
@@ -2134,7 +2140,7 @@ def register_routes(app):
         if request.method == "POST":
             name = request.form.get("name", "").strip()
             asset_tag = request.form.get("asset_tag", "").strip()
-            ip_address = request.form.get("ip_address", "").strip()
+            ip_address = request.form.get("ip_address", "").strip() or request.remote_addr or ""
             location = request.form.get("location", "").strip()
             release_minutes = valid_release_minutes(
                 request.form.get("release_minutes"), app.config.get("DEVICE_LOCK_MINUTES", 15)
@@ -2192,6 +2198,7 @@ def register_routes(app):
             device_stats=device_stats,
             lock_minutes=app.config.get("DEVICE_LOCK_MINUTES", 15),
             next_lock_until=min(active_locks) if active_locks else None,
+            current_client_ip=request.remote_addr or "",
             now_utc=utcnow_iso(),
         )
 

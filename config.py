@@ -12,6 +12,12 @@ class Config:
     SESSION_COOKIE_SAMESITE = "Lax"
     SESSION_COOKIE_SECURE = os.environ.get("SESSION_COOKIE_SECURE", "0").lower() in {"1", "true", "yes"}
     CSRF_ENABLED = True
+    TRUSTED_PROXY_COUNT = int(
+        os.environ.get(
+            "TRUSTED_PROXY_COUNT",
+            "1" if os.environ.get("RENDER", "").lower() == "true" else "0",
+        )
+    )
 
     DB_ENGINE = os.environ.get("DB_ENGINE", "sqlite")
     DB_HOST = os.environ.get("DB_HOST", "localhost")

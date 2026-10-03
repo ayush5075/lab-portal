@@ -60,6 +60,22 @@
       </section>
 
       <aside class="device-control-column">
+        <section class="device-control-panel" id="device-registration">
+          <div class="device-panel-heading compact">
+            <div><h2>Register Lab PC</h2><p>Register the IP seen by the server for this connection.</p></div>
+          </div>
+          <form method="post" action="{{ url_for('admin_devices') }}" class="device-register-form">
+            <label for="device-name">PC Name</label>
+            <input id="device-name" name="name" required maxlength="255" placeholder="Computer 01">
+            <label for="device-asset-tag">Asset Tag</label>
+            <input id="device-asset-tag" name="asset_tag" required maxlength="100" placeholder="LAB-PC-001">
+            <label for="device-ip-address">IP Address</label>
+            <input id="device-ip-address" name="ip_address" value="{{ current_client_ip }}" placeholder="Detected IP address">
+            <label for="device-location">Lab / Location</label>
+            <input id="device-location" name="location" maxlength="255" placeholder="Lab Room A">
+            <button type="submit" class="device-primary-btn">Register PC</button>
+          </form>
+        </section>
         <section class="device-control-panel device-status-overview">
           <div class="device-panel-heading compact"><div><h2>Device Status Overview</h2><p>Current lab computer status.</p></div></div>
           <div class="status-overview-total"><strong>{{ device_stats.total }}</strong><span>Total PCs</span></div>
@@ -88,7 +104,7 @@
         </section>
         <section class="device-control-panel quick-actions">
           <div class="device-panel-heading compact"><div><h2>Quick Actions</h2><p>Common device controls.</p></div></div>
-          <a href="#device-search" class="quick-action blue">Add Device</a>
+          <a href="#device-registration" class="quick-action blue">Add Device</a>
           <a href="#device-search" class="quick-action blue" data-device-action="active">View Active</a>
           <a href="#device-search" class="quick-action red" data-device-action="inactive">View Deactivated</a>
           <a href="#device-search" class="quick-action purple">Search Devices</a>

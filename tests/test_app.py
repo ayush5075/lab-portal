@@ -27,6 +27,7 @@ class LabPortalTestCase(unittest.TestCase):
             ALLOWED_EXTENSIONS = {"pdf"}
             LAB_KEY_DEFAULT_MINUTES = 5
             CSRF_ENABLED = False
+            TRUSTED_PROXY_COUNT = 0
 
         self.app = create_app(TestConfig, db_path=self.db_path)
         self.app.config["TESTING"] = True
@@ -1292,6 +1293,8 @@ class LabPortalTestCase(unittest.TestCase):
         self.assertEqual(page.status_code, 200)
         self.assertIn(b"Device Management", page.data)
         self.assertIn(b"Add Device", page.data)
+        self.assertIn(b'id="device-registration"', page.data)
+        self.assertIn(b'name="ip_address" value="127.0.0.1"', page.data)
 
         settings = self.client.post(
             "/admin/devices/settings",
@@ -1340,6 +1343,24 @@ class LabPortalTestCase(unittest.TestCase):
         ).fetchone()[0]
         conn.close()
         self.assertEqual(is_active, 0)
+
+    def test_admin_device_registration_defaults_to_observed_ip(self):
+        self._login("admin@ayu.com", "admin123")
+        response = self.client.post(
+            "/admin/devices",
+            data={"name": "Current PC", "asset_tag": "CURRENT-PC-001"},
+            environ_base={"REMOTE_ADDR": "198.51.100.15"},
+            follow_redirects=True,
+        )
+        self.assertIn(b"Device added.", response.data)
+
+        conn = sqlite3.connect(self.db_path)
+        ip_address = conn.execute(
+            "SELECT ip_address FROM device WHERE asset_tag = ?",
+            ("CURRENT-PC-001",),
+        ).fetchone()[0]
+        conn.close()
+        self.assertEqual(ip_address, "198.51.100.15")
 
     def test_legacy_auto_device_displays_pc_name(self):
         self._login("admin@ayu.com", "admin123")
@@ -1424,6 +1445,67 @@ class LabPortalTestCase(unittest.TestCase):
         conn.close()
         self.assertEqual(attendance_count, 0)
         self.assertEqual(device_count, 0)
+
+    def test_trusted_proxy_client_ip_allows_registered_lab_pc(self):
+        self._register("Proxy Student", "proxy-student@test.com", "pass1234", course_id="1")
+
+        self._login("admin@ayu.com", "admin123")
+        generated = self.client.post(
+            "/admin/lab/generate",
+            data={"course_id": "1", "minutes": "15"},
+            follow_redirects=True,
+        )
+        match = re.search(rb"Lab key generated: (\d{6})", generated.data)
+        self.assertIsNotNone(match)
+
+        client_ip = "198.51.100.10"
+        conn = sqlite3.connect(self.db_path)
+        conn.execute(
+            "INSERT INTO device (name, asset_tag, ip_address, location, created_at) "
+            "VALUES (?, ?, ?, ?, ?)",
+            ("Registered PC", "REGISTERED-PC-001", client_ip, "Lab", utcnow_iso()),
+        )
+        conn.commit()
+        conn.close()
+
+        proxy_config = type(
+            "TrustedProxyTestConfig",
+            (Config,),
+            {
+                "SECRET_KEY": "test",
+                "UPLOAD_FOLDER": self.app.config["UPLOAD_FOLDER"],
+                "CSRF_ENABLED": False,
+                "TRUSTED_PROXY_COUNT": 1,
+            },
+        )
+        proxy_app = create_app(proxy_config, db_path=self.db_path)
+        proxy_app.config["TESTING"] = True
+        proxy_client = proxy_app.test_client()
+        proxy_headers = {"X-Forwarded-For": client_ip}
+        proxy_environment = {"REMOTE_ADDR": "10.0.0.5"}
+
+        login_response = proxy_client.post(
+            "/login",
+            data={"email": "proxy-student@test.com", "password": "pass1234"},
+            headers=proxy_headers,
+            environ_base=proxy_environment,
+            follow_redirects=True,
+        )
+        self.assertEqual(login_response.status_code, 200)
+
+        attendance_response = proxy_client.post(
+            "/lab/enter",
+            data={"code": match.group(1).decode()},
+            headers=proxy_headers,
+            environ_base=proxy_environment,
+            follow_redirects=True,
+        )
+        self.assertIn(b"Attendance marked successfully.", attendance_response.data)
+
+        conn = sqlite3.connect(self.db_path)
+        attendance_count = conn.execute("SELECT COUNT(*) FROM attendance").fetchone()[0]
+        conn.close()
+        self.assertEqual(attendance_count, 1)
 
     def test_subject_attendance_and_reports(self):
         self._login("admin@ayu.com", "admin123")
